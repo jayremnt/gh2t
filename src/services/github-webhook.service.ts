@@ -54,8 +54,13 @@ export class GitHubWebhookService {
     // Extract branch name from ref (e.g., "refs/heads/main" -> "main")
     const branchName = event.ref.replace('refs/heads/', '');
 
-    // Extract commit messages
-    const commitMessages = event.commits.map((commit) => commit.message);
+    // Extract commit messages sorted by timestamp (latest first)
+    const commitMessages = event.commits
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
+      .map((commit) => commit.message);
 
     // Extract unique authors
     const authors = [
