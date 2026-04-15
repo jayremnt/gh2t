@@ -1,37 +1,22 @@
-FROM node:18-alpine
+FROM node:22-alpine AS builder
 
-# Create app directory
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+RUN npm ci --legacy-peer-deps
 
-# Copy source code
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Remove development dependencies
-RUN npm prune --production
+FROM node:22-alpine
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nestjs -u 1001
+WORKDIR /app
 
-# Change ownership of the app directory
-RUN chown -R nestjs:nodejs /app
-USER nestjs
+COPY package*.json ./
 
-# Expose port
-EXPOSE 3000
+RUN npm ci --omit=dev --legacy-peer-deps
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/webhook/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+COPY --from=builder /app/dist ./dist
 
-# Start the application
-CMD ["node", "dist/main"] 
+CMD ["node", "dist/main"]
